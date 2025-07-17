@@ -1,161 +1,45 @@
-name: Deploy AMI Update to ASG (Main Workflow)
+name: Update AMI and Roll ASG
+
 on:
   workflow_dispatch:
-    inputs:
-      # --- AWS & AMI Parameters ---
-      region:
-        description: 'AWS Region for deployment (e.g., us-east-1)'
-        required: true
-        default: 'us-east-1' # <--- Set your default region here
-      launch_template_id:
-        description: 'The ID of the AWS Launch Template (e.g., lt-0f5387b3aa30e9909)'
-        required: true
-        default: 'lt-0f5387b3aa30e9909' # <--- Set your default Launch Template ID here
-      new_ami_id:
-        description: 'The ID of the new AMI to use (e.g., ami-0123456789abcdef0)'
-        required: true
-        default: 'ami-0123456789abcdef0' # <--- Set a default (or frequently updated) AMI ID here
-      asg_name:
-        description: 'The name of the Auto Scaling Group'
-        required: true
-        default: 'your-auto-scaling-group-name' # <--- Set your default ASG name here
-      aws_iam_role_arn:
-        description: 'AWS IAM Role ARN for OIDC (e.g., arn:aws:iam::123456789012:role/GitHubActionsAWSRole)'
-        required: true
-        default: 'arn:aws:iam::123456789012:role/GitHubActionsAWSRole' # <<-- IMPORTANT: REPLACE WITH YOUR IAM ROLE ARN
-      # --- ASG Scaling Parameters ---
-      update_asg_capacity:
-        description: 'Whether to update ASG min/max/desired capacity'
-        required: false
-        default: 'true'
-        type: boolean
-      min_size:
-        description: 'Minimum size of the Auto Scaling group'
-        required: false
-        default: '1'
-        type: number
-      max_size:
-        description: 'Maximum size of the Auto Scaling group'
-        required: false
-        default: '5'
-        type: number
-      desired_capacity:
-        description: 'Desired capacity of the Auto Scaling group'
-        required: false
-        default: '3'
-        type: number
-      default_cooldown:
-        description: 'Cooldown period for simple scaling policies (seconds)'
-        required: false
-        default: '300'
-        type: number
-      # --- ASG Health Check Parameters ---
-      update_asg_health_check:
-        description: 'Whether to update ASG health check settings'
-        required: false
-        default: 'true'
-        type: boolean
-      health_check_type:
-        description: 'Type of health check (EC2 or ELB)'
-        required: false
-        default: 'EC2'
-      health_check_grace_period:
-        description: 'Health check grace period in seconds'
-        required: false
-        default: '300'
-        type: number
-      # --- Instance Refresh Parameters ---
-      enable_instance_refresh:
-        description: 'Enable/disable the instance refresh step'
-        required: false
-        default: 'true'
-        type: boolean
-      instance_refresh_strategy:
-        description: 'Strategy for instance refresh (Rolling or Checkpoints)'
-        required: false
-        default: 'Rolling'
-      instance_refresh_min_healthy_percentage:
-        description: 'Min healthy percentage for refresh'
-        required: false
-        default: '90'
-        type: number
-      instance_refresh_instance_warmup:
-        description: 'Instance warmup time for refresh (seconds)'
-        required: false
-        default: '300'
-        type: number
-      instance_refresh_auto_rollback:
-        description: 'Auto rollback on refresh failure'
-        required: false
-        default: 'true'
-        type: boolean
-      instance_refresh_checkpoints:
-        description: 'Comma-separated list of checkpoints (e.g., 25,50,75). Only for Checkpoints strategy.'
-        required: false
-        default: ''
-      instance_refresh_skip_matching:
-        description: 'Whether to skip instances that already match the new LT version'
-        required: false
-        default: 'false'
-        type: boolean
-      # --- ASG Process Management (Suspend/Resume) ---
-      suspend_asg_processes:
-        description: 'Set to true to suspend specific processes before update'
-        required: false
-        default: 'false'
-        type: boolean
-      processes_to_suspend:
-        description: 'Comma-separated list of processes to suspend (e.g., Launch,Terminate)'
-        required: false
-        default: ''
-      resume_asg_processes:
-        description: 'Set to true to resume specific processes after the main operation'
-        required: false
-        default: 'false'
-        type: boolean
-      processes_to_resume:
-        description: 'Comma-separated list of processes to resume (e.g., Launch,Terminate)'
-        required: false
-        default: ''
-      # --- Instance Protection ---
-      enable_instance_protection:
-        description: 'Enable/disable new instance protection from ASG termination'
-        required: false
-        default: 'false'
-        type: boolean
+
 jobs:
-  call_ami_update:
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write # Required for OIDC
-      contents: read # Required to checkout code
-    steps:
-      - name: Call AMI Update Reusable Workflow
-        uses: AmanjotSinghSaini-int/cicd-templates/.github/workflows/ami-update-reusable.yml@newtask
- # Path to your reusable workflow
-        with:
-          region: ${{ inputs.region }}
-          launch_template_id: ${{ inputs.launch_template_id }}
-          new_ami_id: ${{ inputs.new_ami_id }}
-          asg_name: ${{ inputs.asg_name }}
-          aws_iam_role_arn: ${{ inputs.aws_iam_role_arn }}
-          update_asg_capacity: ${{ inputs.update_asg_capacity }}
-          min_size: ${{ inputs.min_size }}
-          max_size: ${{ inputs.max_size }}
-          desired_capacity: ${{ inputs.desired_capacity }}
-          default_cooldown: ${{ inputs.default_cooldown }}
-          update_asg_health_check: ${{ inputs.update_asg_health_check }}
-          health_check_type: ${{ inputs.health_check_type }}
-          health_check_grace_period: ${{ inputs.health_check_grace_period }}
-          enable_instance_refresh: ${{ inputs.enable_instance_refresh }}
-          instance_refresh_strategy: ${{ inputs.instance_refresh_strategy }}
-          instance_refresh_min_healthy_percentage: ${{ inputs.instance_refresh_min_healthy_percentage }}
-          instance_refresh_instance_warmup: ${{ inputs.instance_refresh_instance_warmup }}
-          instance_refresh_auto_rollback: ${{ inputs.instance_refresh_auto_rollback }}
-          instance_refresh_checkpoints: ${{ inputs.instance_refresh_checkpoints }}
-          instance_refresh_skip_matching: ${{ inputs.instance_refresh_skip_matching }}
-          suspend_asg_processes: ${{ inputs.suspend_asg_processes }}
-          processes_to_suspend: ${{ inputs.processes_to_suspend }}
-          resume_asg_processes: ${{ inputs.resume_asg_processes }}
-          processes_to_resume: ${{ inputs.processes_to_resume }}
-          enable_instance_protection: ${{ inputs.enable_instance_protection }}
+  update-ami:
+    uses: AmanjotSinghSaini-int/cicd-templates/.github/workflows/ami-update-reusable.yml@newtask
+    with:
+      # --- AWS & Launch Template Info ---
+      region: ap-south-1
+      launch_template_id: lt-0123456789abcdef0
+      new_ami_id: ami-0123456789abcdef0
+      asg_name: my-auto-scaling-group
+      aws_iam_role_arn: arn:aws:iam::123456789012:role/github-actions-role
+
+      # --- ASG Capacity ---
+      update_asg_capacity: true
+      min_size: 1
+      max_size: 3
+      desired_capacity: 2
+      default_cooldown: 300
+
+      # --- ASG Health Check ---
+      update_asg_health_check: true
+      health_check_type: EC2
+      health_check_grace_period: 300
+
+      # --- Instance Refresh ---
+      enable_instance_refresh: true
+      instance_refresh_strategy: Rolling
+      instance_refresh_min_healthy_percentage: 90
+      instance_refresh_instance_warmup: 300
+      instance_refresh_auto_rollback: true
+      instance_refresh_checkpoints: ""
+      instance_refresh_skip_matching: false
+
+      # --- ASG Suspend/Resume (optional) ---
+      suspend_asg_processes: false
+      processes_to_suspend: ""
+      resume_asg_processes: false
+      processes_to_resume: ""
+
+      # --- Instance Protection (optional) ---
+      enable_instance_protection: false
